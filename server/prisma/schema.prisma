@@ -1,0 +1,22 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+model Host {
+  id        Int      @id @default(autoincrement())
+  machineId String   @unique
+  hostname  String
+  publicIp  String
+  privateIp String
+  cpu       String
+  ram       String
+  status    String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
