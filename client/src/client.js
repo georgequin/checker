@@ -68,6 +68,8 @@ function getTelemetry() {
 }
 
 // Connection Events
+let telemetryTimer = null;
+
 socket.on('connect', () => {
     console.log(`[RMM Client] Connected to Relay Server (${RELAY_SERVER_URL}) with Socket ID: ${socket.id}`);
     
@@ -75,9 +77,21 @@ socket.on('connect', () => {
     const telemetry = getTelemetry();
     socket.emit('heartbeat', telemetry);
 
-    setInterval(() => {
+    telemetryTimer = setInterval(() => {
         socket.emit('heartbeat', getTelemetry());
     }, 30000);
+});
+
+socket.on('config_update', (config) => {
+    if (config.telemetryInterval) {
+        console.log(`[RMM Client] Received global config update. Adjusting telemetry heartbeat interval to ${config.telemetryInterval}ms.`);
+        if (telemetryTimer) clearInterval(telemetryTimer);
+        telemetryTimer = setInterval(() => {
+            if (socket.connected) {
+                socket.emit('heartbeat', getTelemetry());
+            }
+        }, config.telemetryInterval);
+    }
 });
 
 let localVncClient = null;
@@ -205,8 +219,10 @@ let activeShell = null;
 socket.on('start_shell', () => {
     if (activeShell) return;
     console.log('[RMM Client] Initializing remote background shell pipeline...');
-    
-    activeShell = spawn(process.platform === 'win32' ? 'cmd.exe' : 'bash', []);
+    activeShell = spawn(
+        process.platform === 'win32' ? 'cmd.exe' : 'bash', 
+        process.platform === 'win32' ? [] : ['-i']
+    );
     
     activeShell.stdout.on('data', data => socket.emit('shell_data', data.toString('utf8')));
     activeShell.stderr.on('data', data => socket.emit('shell_data', data.toString('utf8')));

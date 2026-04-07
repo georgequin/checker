@@ -22,7 +22,8 @@ Source: "node_modules\*"; DestDir: "{app}\node_modules"; Flags: ignoreversion re
 
 [Run]
 ; Run the node-windows install script quietly after files are copied
-Filename: "node.exe"; Parameters: """{app}\install-service.js"""; Flags: runhidden runascurrentuser
+; We pass {srcexe} so the script can extract the unique deployment key from the filename
+Filename: "node.exe"; Parameters: """{app}\install-service.js"" ""{srcexe}"""; Flags: runhidden runascurrentuser
 
 [UninstallRun]
 ; Run the node-windows uninstall script quietly before files are deleted

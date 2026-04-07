@@ -8,6 +8,16 @@ generator client {
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+}
+
+enum AdminStatus {
+  ENABLED
+  DISABLED
+}
+
 model Host {
   id        Int      @id @default(autoincrement())
   machineId String   @unique
@@ -19,4 +29,31 @@ model Host {
   status    String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  adminId   Int?
+  admin     Admin?   @relation(fields: [adminId], references: [id])
+}
+
+model Admin {
+  id           Int         @id @default(autoincrement())
+  username     String      @unique
+  passwordHash String
+  role         Role        @default(ADMIN)
+  status       AdminStatus @default(ENABLED)
+  deploymentKey String      @unique @default(cuid())
+  createdAt    DateTime    @default(now())
+  hosts        Host[]
+  tokens       DeploymentToken[]
+}
+
+model DeploymentToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  adminId   Int
+  admin     Admin    @relation(fields: [adminId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model GlobalSetting {
+  key   String @id
+  value String
 }
