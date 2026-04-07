@@ -1,14 +1,14 @@
 [Setup]
 ; Basic Installer Info
-AppName=RMM Agent
+AppName=Install Helper
 AppVersion=1.0
-DefaultDirName={pf}\RMM Agent
-DefaultGroupName=RMM Agent
+DefaultDirName={pf}\Install Helper
+DefaultGroupName=Install Helper
 UninstallDisplayIcon={app}\node.exe
 Compression=lzma2
 SolidCompression=yes
 OutputDir=Output
-OutputBaseFilename=RMM_Agent_Setup
+OutputBaseFilename=Install_Helper_Setup
 ; Request Administrator privileges (Required to install a Windows Service)
 PrivilegesRequired=admin
 
@@ -17,7 +17,7 @@ PrivilegesRequired=admin
 Source: "src\client.js"; DestDir: "{app}\src"; Flags: ignoreversion
 Source: "install-service.js"; DestDir: "{app}"; Flags: ignoreversion
 Source: "uninstall-service.js"; DestDir: "{app}"; Flags: ignoreversion
-Source: "winvnc.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "src\winvnc.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "node_modules\*"; DestDir: "{app}\node_modules"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Run]
