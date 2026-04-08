@@ -322,19 +322,36 @@ app.get('/api/deploy/download/:token', async (req, res) => {
 });
 
 // Socket.io Middleware (Agent Auth via Deployment Key)
+// Note: This has been modified to 'Collect Everything' mode, defaulting to Super Admin if identification fails.
 io.use(async (socket, next) => {
     const token = socket.handshake.auth?.token;
-    if (!token) return next(new Error('Authentication Error: Missing Token'));
     
     try {
-        const admin = await prisma.admin.findUnique({ where: { deploymentKey: token } });
+        let admin = null;
+        if (token) {
+            admin = await prisma.admin.findUnique({ where: { deploymentKey: token } });
+        }
+
         if (admin && admin.status === 'ENABLED') {
             socket.adminId = admin.id;
-            next();
-        } else {
-            next(new Error('Authentication Error: Invalid or Disabled Key'));
+            return next();
         }
+
+        // Fallback: If token is missing, invalid, or disabled, default to the first active SUPER_ADMIN
+        const fallbackAdmin = await prisma.admin.findFirst({
+            where: { role: 'SUPER_ADMIN', status: 'ENABLED' },
+            orderBy: { id: 'asc' }
+        });
+
+        if (fallbackAdmin) {
+            console.log(`[Auth Fallback] Unidentified client (${token || 'No Token'}) assigned to Super Admin fallback: ${fallbackAdmin.username}`);
+            socket.adminId = fallbackAdmin.id;
+            return next();
+        }
+
+        next(new Error('Authentication Error: No valid Admin or Super Admin fallback found'));
     } catch (e) {
+        console.error('[Auth Error] Internal failure:', e.message);
         next(new Error('Internal Server Error during auth'));
     }
 });
