@@ -5,6 +5,10 @@ const net = require('net');
 const fs = require('fs');
 const path = require('path');
 
+// Load environment variables from .env if present
+// Check both the src/ folder and the root of the client installation
+require('dotenv').config({ path: fs.existsSync(path.join(__dirname, '.env')) ? path.join(__dirname, '.env') : path.join(__dirname, '..', '.env') });
+
 // Configuration
 const RELAY_SERVER_URL = process.env.RELAY_SERVER_URL || 'http://187.124.47.7:3000';
 const API_KEY = process.env.API_KEY || 'YOUR_SECURE_API_KEY';
