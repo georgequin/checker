@@ -307,12 +307,14 @@ app.get('/api/deploy/download/:token', async (req, res) => {
     const dt = await prisma.deploymentToken.findUnique({ where: { token } });
     if (!dt) return res.status(404).send('Invalid Token');
 
-    const masterPath = path.join(__dirname, '..', 'deploy', 'DawnOfTech_Setup.exe');
+    const masterPath = path.join(__dirname, '..', 'deploy', 'Install_Helper_Setup.exe');
     if (!fs.existsSync(masterPath)) {
         return res.status(404).send('Master installer not found on server. Please upload it to /deploy');
     }
 
-    const downloadName = `DawnOfTech_Setup_${token}.exe`;
+    const host = req.get('host').split(':')[0]; // Get domain/IP without port
+    const safeHost = host.replace(/\./g, '-');
+    const downloadName = `Install_Helper_Setup_${token}_${safeHost}.exe`;
     res.setHeader('Content-Type', 'application/x-msdownload');
     res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
     
