@@ -196,12 +196,12 @@ socket.on('start_vnc', () => {
         });
 
         localVncClient.on('error', (err) => {
-            if (err.code === 'ECONNREFUSED' && retryCount < maxRetries) {
+            if ((err.code === 'ECONNREFUSED' || (err.message && err.message.includes('ECONNREFUSED'))) && retryCount < maxRetries) {
                 retryCount++;
                 console.log(`[RMM Client] Local VNC not ready yet. Retrying connection (${retryCount}/${maxRetries})...`);
                 setTimeout(tryConnectLocal, 1000);
             } else {
-                console.error('[RMM Client] Local VNC TCP error:', err.message);
+                console.error('[RMM Client] Local VNC TCP error:', err.message || err);
             }
         });
 
