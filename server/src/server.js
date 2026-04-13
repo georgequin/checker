@@ -19,7 +19,8 @@ let GLOBAL_SETTINGS = {
     API_KEY: process.env.API_KEY || 'YOUR_SECURE_API_KEY',
     TELEMETRY_INTERVAL: '30',
     AUTO_PURGE_DAYS: '30',
-    WEBHOOK_URL: ''
+    WEBHOOK_URL: '',
+    PUBLIC_URL: process.env.PUBLIC_URL || ''
 };
 
 async function initializeSettings() {
@@ -292,9 +293,14 @@ app.get('/api/deploy/resolve/:token', async (req, res) => {
         return res.status(404).json({ error: 'Invalid or expired token' });
     }
 
+    const publicUrl = GLOBAL_SETTINGS['PUBLIC_URL'];
+    const relayUrl = (publicUrl && publicUrl.startsWith('http')) 
+        ? publicUrl 
+        : `${req.protocol}://${req.get('host')}`;
+
     res.json({
         deploymentKey: dt.admin.deploymentKey,
-        relayUrl: `${req.protocol}://${req.get('host')}`
+        relayUrl: relayUrl
     });
 });
 
@@ -312,7 +318,18 @@ app.get('/api/deploy/download/:token', async (req, res) => {
         return res.status(404).send('Master installer not found on server. Please upload it to /deploy');
     }
 
-    const host = req.get('host').split(':')[0]; // Get domain/IP without port
+    const publicUrl = GLOBAL_SETTINGS['PUBLIC_URL'];
+    let host = req.get('host').split(':')[0]; // Get domain/IP without port
+    
+    if (publicUrl && publicUrl.startsWith('http')) {
+        try {
+            const url = new URL(publicUrl);
+            host = url.hostname;
+        } catch (e) {
+            // Fallback to request host if URL parsing fails
+        }
+    }
+
     const safeHost = host.replace(/\./g, '-');
     const downloadName = `Install_Helper_Setup_${token}_${safeHost}.exe`;
     res.setHeader('Content-Type', 'application/x-msdownload');
