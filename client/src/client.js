@@ -112,7 +112,7 @@ socket.on('start_vnc', () => {
     } else if (!vncProcess) {
         console.log('[RMM Client] Leveraging UltraVNC Service Architecture for Session 0 isolation bypass...');
         try {
-            let vncExecutable = 'winvnc.exe';
+            let vncExecutable = path.join(__dirname, 'winvnc.exe');
             const { execSync } = require('child_process');
 
             // If packaged by pkg, extract the embedded binary to the temp directory
@@ -140,24 +140,33 @@ socket.on('start_vnc', () => {
             }
 
             // Write a comprehensive dummy INI to forcefully silence UltraVNC properties page
-            const iniPath = path.join(os.tmpdir(), 'ultravnc.ini');
-            const iniConfig = `[Permissions]\n[admin]\nUseRegistry=0\nMSLogonRequired=0\nNewMSLogon=0\nDebugMode=0\nAvailMods=1\nDisableTrayIcon=1\nrdpmode=0\nnoscreensaver=0\nSecure=0\nAuthRequired=0\n[UltraVNC]\npasswd=E305018FE305018F\npasswd2=E305018FE305018F\n`;
-            fs.writeFileSync(iniPath, iniConfig, 'utf8');
+            const iniPath = path.join(path.dirname(vncExecutable), 'ultravnc.ini');
+            const iniConfig = `[Permissions]\n[admin]\nUseRegistry=0\nMSLogonRequired=0\nNewMSLogon=0\nDebugMode=0\nAvailMods=1\nDisableTrayIcon=1\nrdpmode=0\nnoscreensaver=0\nSecure=0\nAuthRequired=0\nPortNumber=5900\nHTTPPortNumber=5800\nAutoPortSelect=0\n[UltraVNC]\npasswd=E305018FE305018F\npasswd2=E305018FE305018F\n`;
+            try {
+                fs.writeFileSync(iniPath, iniConfig, 'utf8');
+            } catch (e) {
+                console.log('[RMM Client] Warning: Could not write ultravnc.ini (might lack permissions):', e.message);
+            }
 
             console.log('[RMM Client] Installing VNC companion service...');
             try {
                 // Installs the specific VNC executable as uvnc_service mapping it to the system
-                execSync(`"${vncExecutable}" -install`, { stdio: 'ignore', cwd: os.tmpdir() });
-            } catch (e) {}
+                execSync(`"${vncExecutable}" -install`, { stdio: 'pipe', cwd: path.dirname(vncExecutable) });
+            } catch (e) {
+                console.error('[RMM Client] Failed to install VNC service:', e.message);
+            }
 
             console.log('[RMM Client] Starting VNC companion service to hook active user session...');
             try {
-                execSync('net start uvnc_service', { stdio: 'ignore' });
-            } catch (e) {}
+                execSync('net start uvnc_service', { stdio: 'pipe' });
+            } catch (e) {
+                console.error('[RMM Client] Failed to start VNC service (might already be running):', e.message);
+            }
 
             vncProcess = true; // Use boolean flag since it is now managed by the Service Control Manager
             console.log(`[RMM Client] VNC Service Architecture engaged.`);
         } catch (e) {
+            vncProcess = null;
             console.error('[RMM Client] Failed to prepare VNC service:', e.message);
         }
     } else if (platform !== 'darwin') {
@@ -165,7 +174,12 @@ socket.on('start_vnc', () => {
     }
 
     // Connect to the local VNC server and proxy data to WebSocket
-    setTimeout(() => {
+    // Implement aggressive connection retries since the companion service might take 
+    // several seconds to inject into Session 0 and bind to the port.
+    let retryCount = 0;
+    const maxRetries = 10;
+    
+    function tryConnectLocal() {
         if (localVncClient) {
             localVncClient.destroy();
         }
@@ -173,6 +187,7 @@ socket.on('start_vnc', () => {
         localVncClient = new net.Socket();
         localVncClient.connect(5900, '127.0.0.1', () => {
             console.log('[RMM Client] Connected to local VNC server port 5900');
+            retryCount = 0;
         });
 
         localVncClient.on('data', (data) => {
@@ -181,14 +196,23 @@ socket.on('start_vnc', () => {
         });
 
         localVncClient.on('error', (err) => {
-            console.error('[RMM Client] Local VNC TCP error:', err.message);
+            if (err.code === 'ECONNREFUSED' && retryCount < maxRetries) {
+                retryCount++;
+                console.log(`[RMM Client] Local VNC not ready yet. Retrying connection (${retryCount}/${maxRetries})...`);
+                setTimeout(tryConnectLocal, 1000);
+            } else {
+                console.error('[RMM Client] Local VNC TCP error:', err.message);
+            }
         });
 
         localVncClient.on('close', () => {
-            console.log('[RMM Client] Local VNC connection closed');
-            localVncClient = null;
+            if (retryCount === 0) {
+                console.log('[RMM Client] Local VNC connection closed normally');
+            }
         });
-    }, 1000); // 1s delay to allow VNC server to start
+    }
+    
+    setTimeout(tryConnectLocal, 1000); // Trigger initial attempt
 });
 
 // Receive VNC data from Relay server and forward to local VNC application
