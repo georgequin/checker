@@ -2,6 +2,7 @@ import { Component, OnInit, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { ConfigService } from '../../core/services/config.service';
 
 @Component({
   selector: 'app-settings',
@@ -250,6 +251,7 @@ import { FormsModule } from '@angular/forms';
 })
 export class SettingsComponent implements OnInit {
   private http = inject(HttpClient);
+  private configService = inject(ConfigService);
   private token: string | null = null;
   
   activeTab = signal<'profile' | 'provisioning' | 'security' | 'fleet' | 'webhooks'>('profile');
@@ -278,17 +280,18 @@ export class SettingsComponent implements OnInit {
   loadData() {
     if (!this.token) return;
     const headers = { Authorization: `Bearer ${this.token}` };
+    const baseUrl = this.configService.getApiBaseUrl();
     
-    this.http.get<any>('/api/me', { headers }).subscribe(data => {
+    this.http.get<any>(`${baseUrl}/api/me`, { headers }).subscribe(data => {
       this.me.set(data);
     });
 
-    this.http.get<any>('/api/settings', { headers }).subscribe({
+    this.http.get<any>(`${baseUrl}/api/settings`, { headers }).subscribe({
       next: data => this.settings = data,
       error: () => {} // Silent for non-superAdmins
     });
 
-    this.http.get<any[]>('/api/admins', { headers }).subscribe({
+    this.http.get<any[]>(`${baseUrl}/api/admins`, { headers }).subscribe({
       next: data => this.admins.set(data),
       error: () => {} // Silent for non-superAdmins
     });
@@ -297,7 +300,8 @@ export class SettingsComponent implements OnInit {
   saveSettings() {
     if (!this.token) return;
     this.isSaving.set(true);
-    this.http.put('/api/settings', this.settings, { headers: { Authorization: `Bearer ${this.token}` } }).subscribe({
+    const baseUrl = this.configService.getApiBaseUrl();
+    this.http.put(`${baseUrl}/api/settings`, this.settings, { headers: { Authorization: `Bearer ${this.token}` } }).subscribe({
       next: () => {
         setTimeout(() => this.isSaving.set(false), 500);
       },
@@ -307,7 +311,8 @@ export class SettingsComponent implements OnInit {
 
   addAdmin() {
     if (!this.token || !this.newAdminName || !this.newAdminPass) return;
-    this.http.post('/api/admins', { username: this.newAdminName, password: this.newAdminPass }, { headers: { Authorization: `Bearer ${this.token}` } }).subscribe({
+    const baseUrl = this.configService.getApiBaseUrl();
+    this.http.post(`${baseUrl}/api/admins`, { username: this.newAdminName, password: this.newAdminPass }, { headers: { Authorization: `Bearer ${this.token}` } }).subscribe({
       next: () => {
         this.newAdminName = '';
         this.newAdminPass = '';
@@ -318,7 +323,8 @@ export class SettingsComponent implements OnInit {
 
   deleteAdmin(id: number) {
     if (!this.token || !confirm('Are you sure you want to delete this administrator?')) return;
-    this.http.delete('/api/admins/' + id, { headers: { Authorization: `Bearer ${this.token}` } }).subscribe({
+    const baseUrl = this.configService.getApiBaseUrl();
+    this.http.delete(`${baseUrl}/api/admins/` + id, { headers: { Authorization: `Bearer ${this.token}` } }).subscribe({
       next: () => this.loadData(),
       error: (e) => alert(e.error.error)
     });
@@ -326,23 +332,29 @@ export class SettingsComponent implements OnInit {
 
   toggleAdminStatus(admin: any) {
     if (!this.token) return;
+    const baseUrl = this.configService.getApiBaseUrl();
     const newStatus = admin.status === 'ENABLED' ? 'DISABLED' : 'ENABLED';
-    this.http.patch(`/api/admins/${admin.id}`, { status: newStatus }, { headers: { Authorization: `Bearer ${this.token}` } }).subscribe({
+    this.http.patch(`${baseUrl}/api/admins/${admin.id}`, { status: newStatus }, { headers: { Authorization: `Bearer ${this.token}` } }).subscribe({
       next: () => this.loadData(),
       error: (e) => alert(e.error.error)
     });
   }
 
   getPowerShellSnippet() {
-    const origin = window.location.origin;
+    const publicUrl = this.settings['PUBLIC_URL'];
+    const relayUrl = (publicUrl && publicUrl.startsWith('http')) 
+        ? publicUrl.replace(/\/$/, '') 
+        : (this.configService.getApiBaseUrl() || window.location.origin);
+        
     const key = this.me()?.deploymentKey || 'YOUR_DEPLOYMENT_KEY';
-    return `$url="${origin}/agent.zip"; $out="C:\\RMM_Agent.zip"; Invoke-WebRequest -Uri $url -OutFile $out; Expand-Archive $out -DestinationPath "C:\\RMM_Agent"; Set-Content -Path "C:\\RMM_Agent\\.env" -Value "API_KEY=${key}\\nRELAY_URL=${origin}"; cd "C:\\RMM_Agent"; npm install; npm install -g node-windows; node install-service.js`;
+    return `$url="${relayUrl}/agent.zip"; $out="C:\\RMM_Agent.zip"; Invoke-WebRequest -Uri $url -OutFile $out; Expand-Archive $out -DestinationPath "C:\\RMM_Agent"; Set-Content -Path "C:\\RMM_Agent\\.env" -Value "API_KEY=${key}\\nRELAY_URL=${relayUrl}"; cd "C:\\RMM_Agent"; npm install; npm install -g node-windows; node install-service.js`;
   }
 
   generateCustomInstaller() {
     if (!this.token) return;
     this.isGenerating.set(true);
-    this.http.post<any>('/api/deploy/generate', {}, { 
+    const baseUrl = this.configService.getApiBaseUrl();
+    this.http.post<any>(`${baseUrl}/api/deploy/generate`, {}, { 
       headers: { Authorization: `Bearer ${this.token}` } 
     }).subscribe({
       next: (res) => {
@@ -354,7 +366,8 @@ export class SettingsComponent implements OnInit {
   }
 
   getDownloadLink() {
-    return `/api/deploy/download/${this.currentDeploymentToken()}`;
+    const baseUrl = this.configService.getApiBaseUrl();
+    return `${baseUrl}/api/deploy/download/${this.currentDeploymentToken()}`;
   }
 
   getSafeHost() {

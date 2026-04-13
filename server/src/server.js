@@ -8,10 +8,14 @@ const bcrypt = require('bcryptjs');
 const axios = require('axios');
 
 const app = express();
+const cors = require('cors');
 const server = http.createServer(app);
 const io = new Server(server, { cors: { origin: '*' } });
 const prisma = new PrismaClient();
 const wss = new WebSocket.Server({ noServer: true });
+
+app.use(cors());
+app.use(express.json());
 
 const JWT_SECRET = process.env.JWT_SECRET || 'supersecret';
 

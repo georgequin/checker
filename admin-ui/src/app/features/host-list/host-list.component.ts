@@ -5,6 +5,7 @@ import { HttpClient } from '@angular/common/http';
 import RFB from '@novnc/novnc/lib/rfb';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
+import { ConfigService } from '../../core/services/config.service';
 
 @Component({
   selector: 'app-host-list',
@@ -210,6 +211,7 @@ export class HostListComponent implements OnInit {
   @ViewChild('sessionContainer', { static: false }) sessionContainer!: ElementRef;
   
   private http = inject(HttpClient);
+  private configService = inject(ConfigService);
   private token: string | null = null;
 
   hosts = signal<any[]>([]);
@@ -242,15 +244,17 @@ export class HostListComponent implements OnInit {
 
   fetchMe() {
     const headers = { Authorization: `Bearer ${this.token}` };
-    this.http.get<any>('/api/me', { headers }).subscribe(data => {
+    const baseUrl = this.configService.getApiBaseUrl();
+    this.http.get<any>(`${baseUrl}/api/me`, { headers }).subscribe(data => {
       this.me.set(data);
     });
   }
 
   refresh() {
     if (!this.token) return;
+    const baseUrl = this.configService.getApiBaseUrl();
     
-    this.http.get<any[]>('/api/hosts', {
+    this.http.get<any[]>(`${baseUrl}/api/hosts`, {
       headers: { Authorization: `Bearer ${this.token}` }
     }).subscribe({
       next: (data) => this.hosts.set(data),
@@ -314,7 +318,8 @@ export class HostListComponent implements OnInit {
       this.sessionContainer.nativeElement.innerHTML = '';
     }
     
-    this.http.post<any>(`/api/hosts/${host.machineId}/ticket`, {}, {
+    const baseUrl = this.configService.getApiBaseUrl();
+    this.http.post<any>(`${baseUrl}/api/hosts/${host.machineId}/ticket`, {}, {
       headers: { Authorization: `Bearer ${this.token}` }
     }).subscribe({
       next: (res) => setTimeout(() => this.initVncCanvas(res.ticket, host.machineId), 50),
@@ -356,7 +361,8 @@ export class HostListComponent implements OnInit {
       this.sessionContainer.nativeElement.innerHTML = '';
     }
     
-    this.http.post<any>(`/api/hosts/${host.machineId}/shell-ticket`, {}, {
+    const baseUrl = this.configService.getApiBaseUrl();
+    this.http.post<any>(`${baseUrl}/api/hosts/${host.machineId}/shell-ticket`, {}, {
       headers: { Authorization: `Bearer ${this.token}` }
     }).subscribe({
       next: (res) => setTimeout(() => this.initTerminalCanvas(res.ticket, host.machineId), 50),
@@ -383,7 +389,8 @@ export class HostListComponent implements OnInit {
 
   initVncCanvas(ticket: string, machineId: string) {
     if (!this.sessionContainer) return;
-    const wsUrl = `ws://187.124.47.7:3000/vnc?ticket=${ticket}`;
+    const wsBase = this.configService.getWsBaseUrl();
+    const wsUrl = `${wsBase}/vnc?ticket=${ticket}`;
     
     try {
       this.rfbInstance = new RFB(this.sessionContainer.nativeElement, wsUrl, {
@@ -410,7 +417,8 @@ export class HostListComponent implements OnInit {
 
   initTerminalCanvas(ticket: string, machineId: string) {
     if (!this.sessionContainer) return;
-    const wsUrl = `ws://187.124.47.7:3000/shell?ticket=${ticket}`;
+    const wsBase = this.configService.getWsBaseUrl();
+    const wsUrl = `${wsBase}/shell?ticket=${ticket}`;
     
     this.terminalInstance = new Terminal({
       cursorBlink: true,

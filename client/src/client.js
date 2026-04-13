@@ -10,8 +10,8 @@ const path = require('path');
 require('dotenv').config({ path: fs.existsSync(path.join(__dirname, '.env')) ? path.join(__dirname, '.env') : path.join(__dirname, '..', '.env') });
 
 // Configuration
-const RELAY_SERVER_URL = process.env.RELAY_SERVER_URL || 'http://187.124.47.7:3000';
-const API_KEY = process.env.API_KEY || 'YOUR_SECURE_API_KEY';
+const RELAY_SERVER_URL = process.env.RELAY_SERVER_URL || '';
+const API_KEY = process.env.API_KEY || '';
 
 // Unique Machine ID derived from hostname and platform
 const MACHINE_ID = `${os.hostname()}-${os.platform()}`;
