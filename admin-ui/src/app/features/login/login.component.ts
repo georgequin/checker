@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
+import { ConfigService } from '../../core/services/config.service';
 
 @Component({
   selector: 'app-login',
@@ -60,6 +61,7 @@ import { Router } from '@angular/router';
 export class LoginComponent {
   private http = inject(HttpClient);
   private router = inject(Router);
+  private configService = inject(ConfigService);
 
   username = '';
   password = '';
@@ -72,7 +74,8 @@ export class LoginComponent {
     this.loading.set(true);
     this.error.set(null);
 
-    this.http.post<any>('/api/login', { username: this.username, password: this.password }).subscribe({
+    const baseUrl = this.configService.getApiBaseUrl();
+    this.http.post<any>(`${baseUrl}/api/login`, { username: this.username, password: this.password }).subscribe({
       next: (res) => {
         if (res.token) {
           localStorage.setItem('rmm-token', res.token);
