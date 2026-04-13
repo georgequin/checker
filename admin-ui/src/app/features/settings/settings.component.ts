@@ -220,6 +220,14 @@ import { FormsModule } from '@angular/forms';
                   </div>
                   <input type="range" [(ngModel)]="settings['AUTO_PURGE_DAYS']" min="1" max="90" step="1" class="w-full accent-red-500 h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer">
                </div>
+
+               <div class="bg-[#161b22] border border-gray-800 rounded-xl p-6">
+                  <div class="mb-4">
+                     <h3 class="font-medium text-gray-200">Public Entrypoint (FQDN / IP)</h3>
+                     <p class="text-xs text-gray-500 mt-1">The primary address agents will use to find the relay server. Must include protocol (e.g. http://rmm.example.com)</p>
+                  </div>
+                  <input type="text" [(ngModel)]="settings['PUBLIC_URL']" placeholder="http://1.2.3.4:3000" class="w-full bg-[#0d1117] border border-gray-700 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none">
+               </div>
             </div>
           </div>
 
