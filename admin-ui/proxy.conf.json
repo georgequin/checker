@@ -3,5 +3,17 @@
     "target": "http://187.124.47.7:3000",
     "secure": false,
     "changeOrigin": true
+  },
+  "/vnc": {
+    "target": "http://187.124.47.7:3000",
+    "secure": false,
+    "ws": true,
+    "changeOrigin": true
+  },
+  "/shell": {
+    "target": "http://187.124.47.7:3000",
+    "secure": false,
+    "ws": true,
+    "changeOrigin": true
   }
 }

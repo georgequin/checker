@@ -502,8 +502,10 @@ server.on('upgrade', (request, socket, head) => {
 });
 
 wss.on('connection', (ws, request, machineId) => {
+    console.log(`[Relay Server] Admin Dashboard mapping VNC session to machine: ${machineId}`);
     const clientSocket = connectedClients.get(machineId);
     if (!clientSocket) {
+        console.log(`[Relay Server] Rejecting VNC - Machine ${machineId} is not in connectedClients map.`);
         ws.close(1000, 'Client not connected');
         return;
     }
@@ -513,6 +515,7 @@ wss.on('connection', (ws, request, machineId) => {
     }
     activeVncSessions.get(machineId).add(ws);
 
+    console.log(`[Relay Server] Match found. Emitting start_vnc to target ${machineId}`);
     // Ask client to spawn VNC and open local bridge
     clientSocket.emit('start_vnc');
 
