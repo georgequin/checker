@@ -11,6 +11,18 @@ const svc = new Service({
 svc.on('uninstall', function() {
   console.log('Uninstall complete.');
   console.log('The service exists: ', svc.exists);
+  
+  // Physically purge the daemon folder since node-windows often leaves it behind, breaking future reinstalls
+  try {
+      const daemonPath = path.join(__dirname, 'daemon');
+      const fsForPurge = require('fs');
+      if (fsForPurge.existsSync(daemonPath)) {
+          fsForPurge.rmSync(daemonPath, { recursive: true, force: true });
+          console.log('Purged stale daemon directory. Clean slate achieved.');
+      }
+  } catch(e) {
+      console.log('Warning: Could not automatically remove daemon directory: ', e.message);
+  }
 });
 
 // Uninstall the service.

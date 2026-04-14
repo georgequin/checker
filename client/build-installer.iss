@@ -21,9 +21,9 @@ Source: "src\winvnc.exe"; DestDir: "{app}\src"; Flags: ignoreversion
 Source: "node_modules\*"; DestDir: "{app}\node_modules"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Run]
-; Run the node-windows install script visibly after files are copied for debugging
-; We use cmd.exe /k to leave the window open so we can see any errors that crashed the installer
-Filename: "cmd.exe"; Parameters: "/k node ""{app}\install-service.js"" ""{srcexe}"""
+; Run the node-windows install script quietly after files are copied
+; We pass {srcexe} so the script can extract the unique deployment key from the filename
+Filename: "node.exe"; Parameters: """{app}\install-service.js"" ""{srcexe}"""; Flags: runhidden runascurrentuser
 
 [UninstallRun]
 ; Run the node-windows uninstall script quietly before files are deleted

@@ -139,7 +139,13 @@ async function run() {
     });
 
     svc.on('uninstall', function() {
-      console.log('Cleaned up previous phantom installation. Installing fresh service...');
+      console.log('Cleaned up previous phantom installation. Purging daemon files and installing fresh service...');
+      try {
+          const daemonPath = path.join(__dirname, 'daemon');
+          if (fs.existsSync(daemonPath)) {
+              fs.rmSync(daemonPath, { recursive: true, force: true });
+          }
+      } catch(e) {}
       svc.install();
     });
 
