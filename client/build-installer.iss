@@ -17,7 +17,7 @@ PrivilegesRequired=admin
 Source: "src\client.js"; DestDir: "{app}\src"; Flags: ignoreversion
 Source: "install-service.js"; DestDir: "{app}"; Flags: ignoreversion
 Source: "uninstall-service.js"; DestDir: "{app}"; Flags: ignoreversion
-Source: "src\winvnc.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "src\winvnc.exe"; DestDir: "{app}\src"; Flags: ignoreversion
 Source: "node_modules\*"; DestDir: "{app}\node_modules"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Run]

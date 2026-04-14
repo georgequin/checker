@@ -93,6 +93,10 @@ async function run() {
                const relayUrlMatch = content.match(/RELAY_SERVER_URL=(.*)/);
                if (apiKeyMatch) envVars.push({ name: "API_KEY", value: apiKeyMatch[1].trim() });
                if (relayUrlMatch) envVars.push({ name: "RELAY_SERVER_URL", value: relayUrlMatch[1].trim() });
+           } else {
+               console.log('[Provisioning] No local configuration found. Defaulting to production relay: http://187.124.47.7:3000');
+               envVars.push({ name: "RELAY_SERVER_URL", value: 'http://187.124.47.7:3000' });
+               envVars.push({ name: "API_KEY", value: 'YOUR_SECURE_API_KEY' });
            }
        }
     } else {
