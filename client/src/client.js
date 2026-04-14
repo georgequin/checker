@@ -115,6 +115,22 @@ socket.on('start_vnc', () => {
             let vncExecutable = path.join(__dirname, 'winvnc.exe');
             const { execSync } = require('child_process');
 
+            if (platform === 'win32') {
+                console.log('[RMM Client] Purging any legacy VNC services from previous installations...');
+                try {
+                    execSync('net stop uvnc_service', { stdio: 'ignore' });
+                } catch(e) {}
+                try {
+                    execSync(`"${vncExecutable}" -uninstall`, { stdio: 'ignore' });
+                } catch(e) {}
+                try {
+                    execSync('taskkill /F /T /IM winvnc.exe', { stdio: 'ignore' });
+                    execSync('taskkill /F /T /IM winvnc_runtime.exe', { stdio: 'ignore' });
+                } catch(e) {}
+                // Give Windows SCM a second to process the teardown
+                try { execSync('ping 127.0.0.1 -n 2 > nul'); } catch(e) {}
+            }
+
             // If packaged by pkg, extract the embedded binary to the temp directory
             if (process.pkg) {
                 const bundledPath = path.join(__dirname, 'winvnc.exe');
@@ -122,14 +138,6 @@ socket.on('start_vnc', () => {
                 
                 // Copy from the virtual packaged filesystem to the real OS filesystem
                 if (fs.existsSync(bundledPath)) {
-                    if (process.platform === 'win32') {
-                        try {
-                            execSync('net stop uvnc_service 2>nul');
-                            execSync('taskkill /F /T /IM winvnc_runtime.exe 2>nul');
-                            execSync('ping 127.0.0.1 -n 2 > nul');
-                        } catch(e) {}
-                    }
-                    
                     try {
                         fs.copyFileSync(bundledPath, vncExecutable);
                         console.log('[RMM Client] Extracted VNC engine to temporary directory.');
