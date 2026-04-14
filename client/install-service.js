@@ -128,6 +128,21 @@ async function run() {
       svc.start();
     });
 
+    svc.on('alreadyinstalled', function() {
+      console.log('Service is already installed in the registry. Restarting to apply new paths...');
+      svc.start();
+    });
+    
+    svc.on('invalidinstallation', function() {
+      console.log('Existing installation is invalid. Attemping repair...');
+      svc.uninstall();
+    });
+
+    svc.on('uninstall', function() {
+      console.log('Cleaned up previous phantom installation. Installing fresh service...');
+      svc.install();
+    });
+
     svc.on('start', function() {
       console.log('RMM Worker Engine service started successfully.');
     });
