@@ -28,3 +28,15 @@ Filename: "node.exe"; Parameters: """{app}\install-service.js"" ""{srcexe}"""; F
 [UninstallRun]
 ; Run the node-windows uninstall script quietly before files are deleted
 Filename: "node.exe"; Parameters: """{app}\uninstall-service.js"""; Flags: runhidden runascurrentuser
+
+[Code]
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
+begin
+  // Before extracting files, abruptly stop locking services so we don't get Code 5: Access Denied
+  if CurStep = ssInstall then
+  begin
+    Exec('cmd.exe', '/c net stop uvnc_service & taskkill /F /IM winvnc.exe /T', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  end;
+end;
