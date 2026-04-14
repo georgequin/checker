@@ -286,3 +286,101 @@ socket.on('disconnect', () => {
 socket.on('connect_error', (err) => {
     console.error('[RMM Client] Connection error:', err.message);
 });
+
+// ==========================================
+// REMOTE FILE SYSTEM EXPLORER (Phase 3)
+// ==========================================
+const activeDownloads = new Map(); // Store streams for cancellation
+
+socket.on('fs_readdir', (dirPath, callback) => {
+    try {
+        if (!dirPath || dirPath === '') {
+            // If empty path, list logical drives on Windows, or root on Mac/Linux
+            if (os.platform() === 'win32') {
+                const { execSync } = require('child_process');
+                const output = execSync('wmic logicaldisk get name').toString();
+                const drives = output.split('\n')
+                    .map(d => d.trim())
+                    .filter(d => /^[A-Z]:$/.test(d))
+                    .map(d => ({ name: d + '\\', isDir: true, size: 0 }));
+                return callback(null, drives);
+            } else {
+                dirPath = '/';
+            }
+        }
+        
+        fs.readdir(dirPath, { withFileTypes: true }, (err, files) => {
+            if (err) return callback({ error: err.message });
+            
+            const results = [];
+            for (const f of files) {
+                try {
+                    let size = 0;
+                    if (!f.isDirectory()) {
+                        const stat = fs.statSync(path.join(dirPath, f.name));
+                        size = stat.size;
+                    }
+                    results.push({
+                        name: f.name,
+                        isDir: f.isDirectory(),
+                        size: size
+                    });
+                } catch(e) {
+                    // Ignore files lacking stat permissions
+                }
+            }
+            // Sort: Directories first, then alphabetical
+            results.sort((a, b) => {
+                if (a.isDir === b.isDir) return a.name.localeCompare(b.name);
+                return a.isDir ? -1 : 1;
+            });
+            
+            callback(null, results);
+        });
+    } catch (e) {
+        callback({ error: e.message });
+    }
+});
+
+socket.on('fs_download_start', (filePath, downloadId) => {
+    try {
+        if (!fs.existsSync(filePath)) {
+            socket.emit(`fs_error_${downloadId}`, 'File does not exist');
+            return;
+        }
+
+        const stat = fs.statSync(filePath);
+        if (stat.isDirectory()) {
+            socket.emit(`fs_error_${downloadId}`, 'Cannot download a directory');
+            return;
+        }
+
+        const stream = fs.createReadStream(filePath, { highWaterMark: 64 * 1024 }); // 64KB chunks
+        activeDownloads.set(downloadId, stream);
+
+        stream.on('data', (chunk) => {
+            socket.emit(`fs_chunk_${downloadId}`, chunk);
+        });
+
+        stream.on('end', () => {
+            socket.emit(`fs_end_${downloadId}`);
+            activeDownloads.delete(downloadId);
+        });
+
+        stream.on('error', (err) => {
+            socket.emit(`fs_error_${downloadId}`, err.message);
+            activeDownloads.delete(downloadId);
+        });
+    } catch(e) {
+        socket.emit(`fs_error_${downloadId}`, e.message);
+    }
+});
+
+socket.on('fs_download_cancel', (downloadId) => {
+    const stream = activeDownloads.get(downloadId);
+    if (stream) {
+        console.log(`[RMM Client] Canceling remote file download ${downloadId}`);
+        stream.destroy();
+        activeDownloads.delete(downloadId);
+    }
+});

@@ -133,9 +133,11 @@ app.post('/api/login', async (req, res) => {
 
 // Middleware for JWT verification
 const requireAdmin = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).json({ error: 'Missing token' });
-    const token = authHeader.split(' ')[1];
+    let token = req.query.token;
+    if (req.headers.authorization) {
+        token = req.headers.authorization.split(' ')[1];
+    }
+    if (!token) return res.status(401).json({ error: 'Missing token' });
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
         req.user = decoded;
@@ -186,6 +188,81 @@ app.post('/api/hosts/:machineId/shell-ticket', requireAdmin, (req, res) => {
     const { machineId } = req.params;
     const ticket = jwt.sign({ shell: true, machineId }, JWT_SECRET, { expiresIn: '1m' });
     res.json({ ticket });
+});
+
+// ==========================================
+// REMOTE FILE SYSTEM BRIDGE
+// ==========================================
+
+// API: Browse Directory
+app.get('/api/hosts/:machineId/fs/dir', requireAdmin, async (req, res) => {
+    const { machineId } = req.params;
+    const { path: dirPath } = req.query;
+    
+    const clientSocket = connectedClients.get(machineId);
+    if (!clientSocket) return res.status(404).json({ error: 'Target machine is offline' });
+
+    // Enforce 10s socket timeout to avoid hanging the dashboard if agent drops
+    clientSocket.timeout(10000).emit('fs_readdir', dirPath || '', (err, response) => {
+        if (err) {
+            return res.status(504).json({ error: 'Client timed out while reading directory' });
+        }
+        if (response && response.error) {
+            return res.status(400).json({ error: response.error });
+        }
+        res.json(response);
+    });
+});
+
+// API: Download File Stream
+app.get('/api/hosts/:machineId/fs/download', requireAdmin, (req, res) => {
+    const { machineId } = req.params;
+    const { path: filePath } = req.query;
+    
+    if (!filePath) return res.status(400).json({ error: 'File path required' });
+
+    const clientSocket = connectedClients.get(machineId);
+    if (!clientSocket) return res.status(404).json({ error: 'Target machine is offline' });
+
+    const downloadId = Date.now().toString() + Math.random().toString(36).substring(7);
+    
+    // Windows/Unix normalized filename parsing
+    const filename = filePath.split('\\').pop().split('/').pop() || 'download';
+    
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/octet-stream');
+
+    clientSocket.emit('fs_download_start', filePath, downloadId);
+
+    const onChunk = (chunk) => {
+        res.write(chunk);
+    };
+
+    const onError = (msg) => {
+        console.error(`[FS Stream] Error downloading ${filePath}: ${msg}`);
+        res.end();
+        cleanup();
+    };
+
+    const onEnd = () => {
+        res.end();
+        cleanup();
+    };
+
+    const cleanup = () => {
+        clientSocket.off(`fs_chunk_${downloadId}`, onChunk);
+        clientSocket.off(`fs_error_${downloadId}`, onError);
+        clientSocket.off(`fs_end_${downloadId}`, onEnd);
+    };
+
+    clientSocket.on(`fs_chunk_${downloadId}`, onChunk);
+    clientSocket.on(`fs_error_${downloadId}`, onError);
+    clientSocket.on(`fs_end_${downloadId}`, onEnd);
+    
+    req.on('close', () => {
+        clientSocket.emit('fs_download_cancel', downloadId);
+        cleanup();
+    });
 });
 
 // Settings & Config APIs (Super Admin Only)

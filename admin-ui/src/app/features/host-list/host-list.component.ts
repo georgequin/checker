@@ -148,6 +148,11 @@ import { ConfigService } from '../../core/services/config.service';
                   </td>
                   
                   <td class="p-5 flex justify-end gap-2">
+                    <button (click)="openFiles(host)" 
+                            [disabled]="!host.online"
+                            class="bg-[#21262d] text-gray-300 hover:bg-gray-600 hover:text-white px-4 py-1.5 rounded text-sm font-semibold transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed border border-gray-700 hover:border-transparent">
+                      Files
+                    </button>
                     <button (click)="openShell(host)" 
                             [disabled]="!host.online"
                             class="bg-gray-700/50 text-gray-300 hover:bg-gray-600 hover:text-white px-4 py-1.5 rounded text-sm font-semibold transition-all duration-300 disabled:opacity-40 disabled:cursor-not-allowed">
@@ -178,7 +183,10 @@ import { ConfigService } from '../../core/services/config.service';
                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                  <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
-              <span class="font-mono text-sm font-medium text-gray-200">{{ activeSessionHost()?.hostname }} - {{ sessionType() === 'vnc' ? 'Live Screen' : 'Remote Terminal' }}</span>
+              <span class="font-mono text-sm font-medium text-gray-200">
+                {{ activeSessionHost()?.hostname }} - 
+                {{ sessionType() === 'vnc' ? 'Live Screen' : sessionType() === 'terminal' ? 'Remote Terminal' : 'File Explorer' }}
+              </span>
             </div>
             <div class="flex gap-2">
               <button (click)="minimizeSession()" class="text-gray-400 hover:text-white bg-[#21262d] hover:bg-gray-700 transition-colors px-3 py-1.5 rounded text-xs font-bold uppercase tracking-wider shadow-sm border border-gray-700">
@@ -192,7 +200,58 @@ import { ConfigService } from '../../core/services/config.service';
           
           <div class="flex-1 bg-black relative p-2">
              <!-- Internal container for external dom manipulation by terminal/canvas -->
-             <div #sessionContainer class="w-full h-full"></div>
+             <div [hidden]="sessionType() === 'files'" #sessionContainer class="w-full h-full"></div>
+             
+             <!-- Native Angular File Explorer View -->
+             <div *ngIf="sessionType() === 'files'" class="w-full h-full flex flex-col bg-[#0d1117] text-gray-200 p-4">
+                <div class="flex items-center justify-between mb-4 bg-[#161b22] p-3 rounded-lg border border-gray-800">
+                   <div class="flex items-center gap-3 text-sm font-mono overflow-x-auto whitespace-nowrap scrollbar-hide">
+                      <button (click)="navigateUp()" [disabled]="!currentDirPath() || currentDirPath() === ''" class="text-blue-400 hover:text-blue-300 disabled:opacity-30 flex items-center gap-1 transition-colors">
+                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18" /></svg>
+                         Up
+                      </button>
+                      <span class="text-gray-600 font-bold mx-1">|</span>
+                      <span class="text-gray-300 bg-black/50 px-3 py-1 rounded border border-gray-800">{{ currentDirPath() || 'ROOT (Available Drives)' }}</span>
+                   </div>
+                   <button (click)="fetchDir(currentDirPath())" class="text-gray-400 hover:text-white transition-colors bg-[#21262d] p-1.5 rounded items-center flex" title="Refresh Directory">
+                      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                   </button>
+                </div>
+                
+                <div class="flex-1 overflow-auto bg-[#161b22] border border-gray-800 rounded-lg shadow-inner">
+                   <table class="w-full text-left border-collapse text-sm">
+                      <thead class="sticky top-0 bg-[#1f242c] z-10 shadow-sm border-b border-gray-800">
+                         <tr>
+                            <th class="p-3 font-semibold text-gray-400">Name</th>
+                            <th class="p-3 font-semibold text-gray-400 w-32">Size</th>
+                            <th class="p-3 font-semibold text-gray-400 w-32 text-right">Actions</th>
+                         </tr>
+                      </thead>
+                      <tbody>
+                         <tr *ngIf="isLoadingFiles()" class="text-center">
+                            <td colspan="3" class="p-8 text-gray-500 font-mono animate-pulse">Loading directory...</td>
+                         </tr>
+                         <tr *ngIf="!isLoadingFiles() && fileList().length === 0" class="text-center">
+                            <td colspan="3" class="p-8 text-gray-500 font-mono">This directory is empty.</td>
+                         </tr>
+                         <tr *ngFor="let file of fileList()" class="border-b border-gray-800/50 hover:bg-[#21262d] transition-colors group">
+                            <td class="p-3">
+                               <div class="flex items-center gap-3">
+                                  <svg *ngIf="file.isDir" class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" /></svg>
+                                  <svg *ngIf="!file.isDir" class="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>
+                                  <a *ngIf="file.isDir" href="javascript:void(0)" (click)="navigateToDir(file.name)" class="font-medium text-blue-300 hover:text-blue-100 cursor-pointer">{{ file.name }}</a>
+                                  <span *ngIf="!file.isDir" class="font-medium text-gray-300">{{ file.name }}</span>
+                               </div>
+                            </td>
+                            <td class="p-3 text-gray-500 font-mono text-xs">{{ file.isDir ? '--' : formatBytes(file.size) }}</td>
+                            <td class="p-3 text-right">
+                               <button *ngIf="!file.isDir" (click)="downloadFile(file.name)" class="text-blue-500 hover:text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 px-3 py-1 rounded text-xs transition-colors font-medium border border-blue-500/20">Download</button>
+                            </td>
+                         </tr>
+                      </tbody>
+                   </table>
+                </div>
+             </div>
              
              <!-- overlay loading spinner -->
              <div *ngIf="isConnecting()" class="absolute inset-0 flex items-center justify-center flex-col gap-4 z-10 bg-[#0d1117]/80 backdrop-blur-sm">
@@ -216,9 +275,14 @@ export class HostListComponent implements OnInit {
 
   hosts = signal<any[]>([]);
   activeSessionHost = signal<any | null>(null);
-  sessionType = signal<'vnc' | 'terminal' | null>(null);
+  sessionType = signal<'vnc' | 'terminal' | 'files' | null>(null);
   isConnecting = signal<boolean>(false);
   isSessionMinimized = signal<boolean>(false);
+  
+  // File Explorer State
+  currentDirPath = signal<string>('');
+  fileList = signal<{name: string, isDir: boolean, size: number}[]>([]);
+  isLoadingFiles = signal<boolean>(false);
   
   toastMessage = signal<{title: string, message: string, type: 'error' | 'info' | 'success'} | null>(null);
   confirmDialog = signal<{title: string, message: string, onConfirm: () => void, onCancel?: () => void} | null>(null);
@@ -371,6 +435,107 @@ export class HostListComponent implements OnInit {
         this.closeSession();
       }
     });
+  }
+
+  // File Manager Logic
+  openFiles(host: any) {
+    if (this.activeSessionHost()) {
+      if (this.activeSessionHost().machineId === host.machineId && this.sessionType() === 'files') {
+         this.resumeSession();
+         return;
+      } else {
+         this.showConfirm(
+           'Active Session Discovered', 
+           `You already have an active background session running with ${this.activeSessionHost().hostname}. Disconnect it and securely migrate to a new File Explorer session with ${host.hostname}?`,
+           () => {
+             this.closeSession();
+             this.executeFiles(host);
+           }
+         );
+         return;
+      }
+    }
+    this.executeFiles(host);
+  }
+
+  private executeFiles(host: any) {
+    this.activeSessionHost.set(host);
+    this.sessionType.set('files');
+    this.isSessionMinimized.set(false);
+    this.currentDirPath.set('');
+    this.fileList.set([]);
+    this.fetchDir();
+  }
+
+  fetchDir(path: string = '') {
+    this.isLoadingFiles.set(true);
+    const host = this.activeSessionHost();
+    const baseUrl = this.configService.getApiBaseUrl();
+    
+    // Normalize path separators
+    const encodedPath = encodeURIComponent(path);
+    this.http.get<any[]>(`${baseUrl}/api/hosts/${host.machineId}/fs/dir?path=${encodedPath}`, {
+      headers: { Authorization: `Bearer ${this.token}` }
+    }).subscribe({
+      next: (data) => {
+         this.currentDirPath.set(path);
+         this.fileList.set(data);
+         this.isLoadingFiles.set(false);
+      },
+      error: (err) => {
+         this.isLoadingFiles.set(false);
+         this.showToast('File System Error', err.error?.error || 'Failed to read directory', 'error');
+         if (path !== '') this.navigateUp();
+      }
+    });
+  }
+
+  navigateUp() {
+    const p = this.currentDirPath();
+    if (!p) return;
+    
+    // Handles Windows and Unix paths
+    let parts = p.replace(/[\/\\]$/, '').split(/[\/\\]/);
+    parts.pop();
+    let newPath = parts.join('\\');
+    if (newPath.length === 2 && newPath[1] === ':') newPath += '\\'; // C: -> C:\
+    if (parts.length === 0 || newPath === '') newPath = '';
+    
+    this.fetchDir(newPath);
+  }
+
+  navigateToDir(dirName: string) {
+    let p = this.currentDirPath();
+    if (!p) p = dirName; // Root drive
+    else p = p.replace(/[\/\\]$/, '') + '\\' + dirName;
+    this.fetchDir(p);
+  }
+
+  downloadFile(fileName: string) {
+    const host = this.activeSessionHost();
+    let p = this.currentDirPath().replace(/[\/\\]$/, '') + '\\' + fileName;
+    if (this.currentDirPath() === '') p = fileName;
+
+    const baseUrl = this.configService.getApiBaseUrl();
+    const url = `${baseUrl}/api/hosts/${host.machineId}/fs/download?path=${encodeURIComponent(p)}&token=${this.token}`;
+    
+    // Trigger native browser download directly onto disk via auto-clicking an anchor
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    this.showToast('Transfer Started', `Requesting ${fileName} from remote agent natively...`, 'success');
+  }
+
+  formatBytes(bytes: number, decimals = 2) {
+    if (!+bytes) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
   }
 
   minimizeSession() {
