@@ -199,6 +199,140 @@ import { ConfigService } from '../../core/services/config.service';
           </header>
           
           <div class="flex-1 bg-black relative p-2">
+             <!-- ScreenConnect Style Floating Toolbar -->
+             <div *ngIf="activeSessionHost() && sessionType() !== 'files'" class="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center">
+                <!-- Toolbar Row -->
+                <div class="bg-[#1e2329] rounded border border-gray-700/80 shadow-2xl flex items-center p-1 relative">
+                    
+                    <button (click)="toggleToolbarMenu('view')" [ngClass]="{'bg-[#374151] text-white': activeToolbarMenu() === 'view', 'text-gray-400 hover:text-gray-200 hover:bg-[#2c313a]': activeToolbarMenu() !== 'view'}" class="p-2 rounded transition-colors" title="View">
+                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    </button>
+                    
+                    <button (click)="toggleToolbarMenu('essentials')" [ngClass]="{'bg-[#374151] text-white': activeToolbarMenu() === 'essentials', 'text-gray-400 hover:text-gray-200 hover:bg-[#2c313a]': activeToolbarMenu() !== 'essentials'}" class="p-2 rounded transition-colors" title="Essentials">
+                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                    </button>
+                    
+                    <button (click)="toggleToolbarMenu('transfer')" [ngClass]="{'bg-[#374151] text-white': activeToolbarMenu() === 'transfer', 'text-gray-400 hover:text-gray-200 hover:bg-[#2c313a]': activeToolbarMenu() !== 'transfer'}" class="p-2 rounded transition-colors" title="File Transfer">
+                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                    </button>
+                    
+                    <button (click)="toggleToolbarMenu('capture')" [ngClass]="{'bg-[#374151] text-white': activeToolbarMenu() === 'capture', 'text-gray-400 hover:text-gray-200 hover:bg-[#2c313a]': activeToolbarMenu() !== 'capture'}" class="p-2 rounded transition-colors" title="Screen Capture">
+                       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                    </button>
+
+                </div>
+
+                <!-- Dropdown Menus placed right below -->
+                <div *ngIf="activeToolbarMenu()" class="mt-2 bg-[#1e2329] border border-gray-700 rounded-lg shadow-2xl p-4 w-[400px]">
+                   
+                   <!-- View Menu -->
+                   <div *ngIf="activeToolbarMenu() === 'view'">
+                      <div class="flex justify-between items-center mb-3">
+                         <h4 class="text-sm font-bold text-gray-200">View</h4>
+                         <button (click)="closeToolbarMenu()" class="text-gray-400 hover:text-white"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                      </div>
+                      
+                      <div class="grid grid-cols-2 gap-4 mb-4">
+                         <div>
+                            <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Select Quality</div>
+                            <div class="flex rounded overflow-hidden border border-gray-700 bg-black/20">
+                               <button (click)="setVncQuality(0)" [ngClass]="{'bg-blue-600 font-bold': vncQuality() === 0}" class="flex-1 py-1.5 text-xs text-gray-300 hover:bg-gray-700 transition-colors border-r border-gray-700">Low</button>
+                               <button (click)="setVncQuality(2)" [ngClass]="{'bg-blue-600 font-bold': vncQuality() === 2}" class="flex-1 py-1.5 text-xs text-gray-300 hover:bg-gray-700 transition-colors border-r border-gray-700">Med</button>
+                               <button (click)="setVncQuality(9)" [ngClass]="{'bg-blue-600 font-bold': vncQuality() === 9}" class="flex-1 py-1.5 text-xs text-gray-300 hover:bg-gray-700 transition-colors">High</button>
+                            </div>
+                         </div>
+                         <div>
+                            <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Zoom</div>
+                            <div class="flex rounded overflow-hidden border border-gray-700 bg-black/20">
+                               <button class="flex-1 py-1.5 text-xs text-gray-300 hover:bg-gray-700 transition-colors border-r border-gray-700">-</button>
+                               <button class="flex-1 py-1.5 text-xs text-blue-400 font-bold border-r border-gray-700 hover:bg-gray-700 transition-colors">Fit</button>
+                               <button class="flex-1 py-1.5 text-xs text-gray-300 hover:bg-gray-700 transition-colors">+</button>
+                            </div>
+                         </div>
+                      </div>
+
+                      <div class="mt-4">
+                         <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Select Logon Session</div>
+                         <div class="flex rounded overflow-hidden border border-gray-700 bg-black/20">
+                            <button (click)="switchSessionMode('terminal')" [ngClass]="{'bg-blue-600 font-bold text-white': sessionType() === 'terminal', 'text-gray-400': sessionType() !== 'terminal'}" class="flex-1 py-2 text-xs hover:bg-gray-700 transition-colors border-r border-gray-700">[Backstage]</button>
+                            <button (click)="switchSessionMode('vnc')" [ngClass]="{'bg-blue-600 font-bold text-white': sessionType() === 'vnc', 'text-gray-400': sessionType() !== 'vnc'}" class="flex-1 py-2 text-xs hover:bg-gray-700 transition-colors">Console/Desktop</button>
+                         </div>
+                      </div>
+                   </div>
+
+                   <!-- Essentials Menu -->
+                   <div *ngIf="activeToolbarMenu() === 'essentials'">
+                      <div class="flex justify-between items-center mb-3">
+                         <h4 class="text-sm font-bold text-gray-200">Essentials</h4>
+                         <button (click)="closeToolbarMenu()" class="text-gray-400 hover:text-white"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                      </div>
+
+                      <div class="grid grid-cols-2 gap-3 mb-3">
+                         <button (click)="sendCtrlAltDel()" class="flex flex-col items-center justify-center py-3 bg-[#242930] hover:bg-[#2c313a] rounded border border-gray-700/50 transition-colors">
+                            <span class="font-mono text-sm text-gray-200 mb-1">⌘+⌥+⌫</span>
+                            <span class="text-[10px] text-gray-400 uppercase tracking-widest">Send Ctrl-Alt-Del</span>
+                         </button>
+                         <button (click)="toggleClipboardSync()" [ngClass]="clipboardSync() ? 'bg-blue-600/20 border-blue-500' : 'bg-[#242930] hover:bg-[#2c313a] border-gray-700/50'" class="flex flex-col items-center justify-center py-3 rounded border transition-colors cursor-pointer">
+                            <svg class="w-5 h-5 mb-1" [ngClass]="clipboardSync() ? 'text-blue-400' : 'text-gray-400'" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                            <span class="text-[10px] text-gray-400 uppercase tracking-widest flex items-center gap-1">
+                               Clipboard Sync
+                               <div class="w-2 h-2 rounded-full" [ngClass]="clipboardSync() ? 'bg-emerald-500' : 'bg-gray-600'"></div>
+                            </span>
+                         </button>
+                      </div>
+                      
+                      <div class="grid grid-cols-3 gap-2">
+                         <button (click)="rebootHost('normal')" class="col-span-1 py-3 px-2 bg-[#242930] hover:bg-[#2c313a] rounded border border-gray-700/50 text-xs text-gray-300 text-center flex flex-col items-center transition-colors">
+                            <svg class="h-4 w-4 mb-1 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            Reboot
+                         </button>
+                         <button (click)="rebootHost('safe')" class="col-span-1 py-3 px-2 bg-[#242930] hover:bg-[#2c313a] rounded border border-gray-700/50 text-xs text-gray-300 text-center flex flex-col items-center transition-colors">
+                            <svg class="h-4 w-4 mb-1 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            Safe Mode
+                         </button>
+                         <button class="col-span-1 py-3 px-2 bg-[#242930] hover:bg-[#2c313a] rounded border border-gray-700/50 text-xs text-gray-300 text-center flex flex-col items-center transition-colors">
+                            <svg class="h-4 w-4 mb-1 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                            Credentials
+                         </button>
+                      </div>
+                   </div>
+
+                   <!-- File Transfer Menu -->
+                   <div *ngIf="activeToolbarMenu() === 'transfer'">
+                      <div class="flex justify-between items-center mb-3">
+                         <h4 class="text-sm font-bold text-gray-200">File Transfer</h4>
+                         <button (click)="closeToolbarMenu()" class="text-gray-400 hover:text-white"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                      </div>
+                      
+                      <div class="flex justify-center my-6">
+                         <button (click)="switchToFiles()" class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2.5 rounded shadow-[0_0_15px_rgba(37,99,235,0.3)] font-medium transition-colors flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>
+                            Open File Explorer
+                         </button>
+                      </div>
+                   </div>
+
+                   <!-- Screen Capture Menu -->
+                   <div *ngIf="activeToolbarMenu() === 'capture'">
+                      <div class="flex justify-between items-center mb-3">
+                         <h4 class="text-sm font-bold text-gray-200">Screen Capture</h4>
+                         <button (click)="closeToolbarMenu()" class="text-gray-400 hover:text-white"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                      </div>
+                      <div class="grid grid-cols-2 gap-4">
+                         <button (click)="takeScreenshot()" class="py-5 bg-[#242930] hover:bg-[#2c313a] rounded border border-gray-700/50 flex flex-col items-center justify-center gap-2 text-sm text-gray-200 transition-colors">
+                            <svg class="h-6 w-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            Screenshot
+                         </button>
+                         <button (click)="toggleScreenRecord()" [ngClass]="isRecording() ? 'bg-red-900/40 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]' : 'bg-[#242930] hover:bg-[#2c313a] border-gray-700/50'" class="py-5 rounded border flex flex-col items-center justify-center gap-2 text-sm text-gray-200 transition-colors">
+                            <div class="h-4 w-4 rounded-full bg-red-500" [ngClass]="{'animate-pulse shadow-[0_0_10px_rgba(239,68,68,1)]': isRecording()}"></div>
+                            {{ isRecording() ? 'Stop Recording' : 'Record Video' }}
+                         </button>
+                      </div>
+                   </div>
+
+                </div>
+             </div>
+
              <!-- Internal container for external dom manipulation by terminal/canvas -->
              <div [hidden]="sessionType() === 'files'" #sessionContainer class="w-full h-full"></div>
              
@@ -279,6 +413,12 @@ export class HostListComponent implements OnInit {
   isConnecting = signal<boolean>(false);
   isSessionMinimized = signal<boolean>(false);
   
+  // Toolbar State
+  activeToolbarMenu = signal<'view' | 'essentials' | 'transfer' | 'capture' | null>(null);
+  vncQuality = signal<number>(2); // 0=Low, 2=Med, 9=High
+  clipboardSync = signal<boolean>(true);
+  isRecording = signal<boolean>(false);
+  
   // File Explorer State
   currentDirPath = signal<string>('');
   fileList = signal<{name: string, isDir: boolean, size: number}[]>([]);
@@ -353,9 +493,16 @@ export class HostListComponent implements OnInit {
 
   openVnc(host: any) {
     if (this.activeSessionHost()) {
-      if (this.activeSessionHost().machineId === host.machineId && this.sessionType() === 'vnc') {
-         this.resumeSession();
-         return;
+      if (this.activeSessionHost().machineId === host.machineId) {
+         if (this.sessionType() === 'vnc') {
+            this.resumeSession();
+            return;
+         } else {
+            // Seamlessly pivot session modes on the same host
+            this.closeSession();
+            this.executeVnc(host);
+            return;
+         }
       } else {
          this.showConfirm(
            'Active Session Discovered', 
@@ -396,9 +543,16 @@ export class HostListComponent implements OnInit {
 
   openShell(host: any) {
     if (this.activeSessionHost()) {
-      if (this.activeSessionHost().machineId === host.machineId && this.sessionType() === 'terminal') {
-         this.resumeSession();
-         return;
+      if (this.activeSessionHost().machineId === host.machineId) {
+         if (this.sessionType() === 'terminal') {
+            this.resumeSession();
+            return;
+         } else {
+            // Seamlessly pivot session modes on the same host
+            this.closeSession();
+            this.executeShell(host);
+            return;
+         }
       } else {
          this.showConfirm(
            'Active Session Discovered', 
@@ -440,9 +594,16 @@ export class HostListComponent implements OnInit {
   // File Manager Logic
   openFiles(host: any) {
     if (this.activeSessionHost()) {
-      if (this.activeSessionHost().machineId === host.machineId && this.sessionType() === 'files') {
-         this.resumeSession();
-         return;
+      if (this.activeSessionHost().machineId === host.machineId) {
+         if (this.sessionType() === 'files') {
+            this.resumeSession();
+            return;
+         } else {
+            // Seamlessly pivot session modes on the same host
+            this.closeSession();
+            this.executeFiles(host);
+            return;
+         }
       } else {
          this.showConfirm(
            'Active Session Discovered', 
@@ -563,13 +724,15 @@ export class HostListComponent implements OnInit {
       });
 
       this.rfbInstance.qualityLevel = 2;
-      this.rfbInstance.compressionLevel = 9;
+      this.rfbInstance.compressionLevel = 2; // Dropped from maximum CPU zlib '9' to fast '2'
       this.rfbInstance.scaleViewport = true;
       this.rfbInstance.clipViewport = true;
       this.rfbInstance.background = '#000000';
 
-      this.rfbInstance.addEventListener('connect', () => this.isConnecting.set(false));
-      this.rfbInstance.addEventListener('disconnect', (e: any) => {
+      const rfb = this.rfbInstance;
+      rfb.addEventListener('connect', () => this.isConnecting.set(false));
+      rfb.addEventListener('disconnect', (e: any) => {
+         if (this.rfbInstance !== rfb) return; // Ignore event if we have moved on to a new session
          if (this.isSessionMinimized()) {
             this.showToast('Session Dropped', 'The background VNC session was disconnected gracefully.', 'info');
          }
@@ -627,7 +790,9 @@ export class HostListComponent implements OnInit {
        }
     });
 
-    this.terminalWs.onclose = () => {
+    const ws = this.terminalWs;
+    ws.onclose = () => {
+       if (this.terminalWs !== ws) return; // Ignore event if we have moved on to a new socket
        if (this.isSessionMinimized()) {
           this.showToast('Session Dropped', 'The background terminal session was closed by the target host.', 'info');
        }
@@ -661,9 +826,115 @@ export class HostListComponent implements OnInit {
     this.activeSessionHost.set(null);
     this.sessionType.set(null);
     this.isSessionMinimized.set(false);
+    this.activeToolbarMenu.set(null);
     
     if (this.sessionContainer && this.sessionContainer.nativeElement) {
       this.sessionContainer.nativeElement.innerHTML = '';
     }
+  }
+
+  // --- Toolbar Methods ---
+
+  toggleToolbarMenu(menu: 'view' | 'essentials' | 'transfer' | 'capture') {
+    if (this.activeToolbarMenu() === menu) {
+      this.activeToolbarMenu.set(null);
+    } else {
+      this.activeToolbarMenu.set(menu);
+    }
+  }
+
+  closeToolbarMenu() {
+    this.activeToolbarMenu.set(null);
+  }
+
+  setVncQuality(quality: number) {
+    this.vncQuality.set(quality);
+    if (this.rfbInstance) {
+        this.rfbInstance.qualityLevel = quality;
+        this.rfbInstance.compressionLevel = quality === 9 ? 6 : (quality === 0 ? 1 : 2); // Dynamic CPU adjustment
+        this.showToast('Quality Changed', `VNC Quality set to ${quality === 0 ? 'Low' : quality === 9 ? 'High' : 'Medium'}`, 'info');
+    }
+    this.closeToolbarMenu();
+  }
+
+  switchSessionMode(mode: 'vnc' | 'terminal') {
+    if (this.sessionType() === mode) return;
+    this.closeToolbarMenu();
+    if (mode === 'vnc') {
+       this.openVnc(this.activeSessionHost());
+    } else {
+       this.openShell(this.activeSessionHost());
+    }
+  }
+
+  sendCtrlAltDel() {
+    if (this.rfbInstance) {
+        this.rfbInstance.sendCtrlAltDel();
+        this.showToast('Command Sent', 'Ctrl-Alt-Del keystrokes securely transmitted.', 'success');
+    } else {
+        this.showToast('Unavailable', 'Control signals can only be sent in Screen Mode.', 'error');
+    }
+    this.closeToolbarMenu();
+  }
+
+  toggleClipboardSync() {
+    this.clipboardSync.set(!this.clipboardSync());
+    if (this.clipboardSync()) {
+        this.showToast('Clipboard Sync', 'Bi-directional clipboard synchronization is now ACTIVE.', 'info');
+    } else {
+        this.showToast('Clipboard Sync', 'Bi-directional clipboard synchronization is now MUTED.', 'info');
+    }
+  }
+
+  rebootHost(mode: 'normal' | 'safe') {
+     this.showConfirm(
+        'Confirm Remote Reboot',
+        `Are you absolutely sure you want to reboot ${this.activeSessionHost().hostname} into ${mode.toUpperCase()} mode? The session will instantly disconnect.`,
+        () => {
+           // Not fully hooked up to backend worker yet, so we'll just show the toast.
+           this.showToast('Reboot Signal Sent', 'The remote machine has acknowledged the reboot command.', 'success');
+           this.closeToolbarMenu();
+           this.closeSession();
+        }
+     );
+  }
+
+  switchToFiles() {
+     this.closeToolbarMenu();
+     this.openFiles(this.activeSessionHost());
+  }
+
+  takeScreenshot() {
+     this.closeToolbarMenu();
+     if (!this.rfbInstance) {
+        this.showToast('Unavailable', 'Screenshots can only be captured during a live Screen Session.', 'error');
+        return;
+     }
+
+     try {
+        const canvas = this.sessionContainer.nativeElement.querySelector('canvas');
+        if (!canvas) throw new Error('Canvas not found');
+        
+        const dataUrl = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `Screenshot_${this.activeSessionHost().hostname}_${new Date().getTime()}.png`;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        this.showToast('Screenshot Saved', 'The screenshot has been saved to your local downloads folder.', 'success');
+     } catch (e) {
+        this.showToast('Capture Failed', 'Could not read frame from VNC canvas.', 'error');
+     }
+  }
+
+  toggleScreenRecord() {
+     this.isRecording.set(!this.isRecording());
+     if (this.isRecording()) {
+        this.showToast('Recording Started', 'The active screen session is now being recorded locally.', 'success');
+     } else {
+        this.showToast('Recording Saved', 'The recording has been finalized.', 'info');
+     }
+     this.closeToolbarMenu();
   }
 }

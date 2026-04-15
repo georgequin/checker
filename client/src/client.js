@@ -16,9 +16,9 @@ const API_KEY = process.env.API_KEY || '';
 // Unique Machine ID derived from hostname and platform
 const MACHINE_ID = `${os.hostname()}-${os.platform()}`;
 
-// Socket Configuration
 const socket = io(RELAY_SERVER_URL, {
     auth: { token: API_KEY },
+    transports: ['websocket'], // Force pure WebSockets immediately to bypass Engine.io HTTP-polling lag
     reconnection: true,
     reconnectionDelay: 5000,
     reconnectionAttempts: Infinity

@@ -126,12 +126,16 @@ import { ConfigService } from '../../core/services/config.service';
                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     </div>
                     <h4 class="text-white font-bold mb-1">Installer Ready</h4>
-                    <p class="text-xs text-gray-500 mb-6 font-mono break-all">Install_Helper_Setup_{{ currentDeploymentToken() }}_{{ getSafeHost() }}.exe</p>
+                    <p class="text-xs text-gray-500 mb-6 font-mono break-all">Install_Helper_Setup_{{ currentDeploymentToken() }}_{{ getSafeHost() }}.exe / .msi</p>
                     
                     <div class="flex gap-4">
-                      <a [href]="getDownloadLink()" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors font-bold text-sm flex items-center gap-2">
+                      <a [href]="getDownloadLink('exe')" class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg transition-colors font-bold text-sm flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                        Download Now
+                        Download .EXE
+                      </a>
+                      <a [href]="getDownloadLink('msi')" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors font-bold text-sm flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                        Download .MSI
                       </a>
                       <button (click)="currentDeploymentToken.set('')" class="px-5 py-2.5 bg-[#0d1117] hover:bg-gray-800 text-gray-400 hover:text-gray-200 border border-gray-700 rounded-lg transition-colors text-sm font-medium">Reset</button>
                     </div>
@@ -253,12 +257,12 @@ export class SettingsComponent implements OnInit {
   private http = inject(HttpClient);
   private configService = inject(ConfigService);
   private token: string | null = null;
-  
+
   activeTab = signal<'profile' | 'provisioning' | 'security' | 'fleet' | 'webhooks'>('profile');
   isSaving = signal<boolean>(false);
   isGenerating = signal<boolean>(false);
   currentDeploymentToken = signal<string>('');
-  
+
   settings: Record<string, string> = {};
   admins = signal<any[]>([]);
   me = signal<any>(null);
@@ -273,7 +277,7 @@ export class SettingsComponent implements OnInit {
   ngOnInit() {
     this.token = localStorage.getItem('rmm-token');
     if (this.token) {
-       this.loadData();
+      this.loadData();
     }
   }
 
@@ -281,19 +285,19 @@ export class SettingsComponent implements OnInit {
     if (!this.token) return;
     const headers = { Authorization: `Bearer ${this.token}` };
     const baseUrl = this.configService.getApiBaseUrl();
-    
+
     this.http.get<any>(`${baseUrl}/api/me`, { headers }).subscribe(data => {
       this.me.set(data);
     });
 
     this.http.get<any>(`${baseUrl}/api/settings`, { headers }).subscribe({
       next: data => this.settings = data,
-      error: () => {} // Silent for non-superAdmins
+      error: () => { } // Silent for non-superAdmins
     });
 
     this.http.get<any[]>(`${baseUrl}/api/admins`, { headers }).subscribe({
       next: data => this.admins.set(data),
-      error: () => {} // Silent for non-superAdmins
+      error: () => { } // Silent for non-superAdmins
     });
   }
 
@@ -342,10 +346,10 @@ export class SettingsComponent implements OnInit {
 
   getPowerShellSnippet() {
     const publicUrl = this.settings['PUBLIC_URL'];
-    const relayUrl = (publicUrl && publicUrl.startsWith('http')) 
-        ? publicUrl.replace(/\/$/, '') 
-        : (this.configService.getApiBaseUrl() || window.location.origin);
-        
+    const relayUrl = (publicUrl && publicUrl.startsWith('http'))
+      ? publicUrl.replace(/\/$/, '')
+      : (this.configService.getApiBaseUrl() || window.location.origin);
+
     const key = this.me()?.deploymentKey || 'YOUR_DEPLOYMENT_KEY';
     return `$url="${relayUrl}/agent.zip"; $out="C:\\RMM_Agent.zip"; Invoke-WebRequest -Uri $url -OutFile $out; Expand-Archive $out -DestinationPath "C:\\RMM_Agent"; Set-Content -Path "C:\\RMM_Agent\\.env" -Value "API_KEY=${key}\\nRELAY_URL=${relayUrl}"; cd "C:\\RMM_Agent"; npm install; npm install -g node-windows; node install-service.js`;
   }
@@ -354,8 +358,8 @@ export class SettingsComponent implements OnInit {
     if (!this.token) return;
     this.isGenerating.set(true);
     const baseUrl = this.configService.getApiBaseUrl();
-    this.http.post<any>(`${baseUrl}/api/deploy/generate`, {}, { 
-      headers: { Authorization: `Bearer ${this.token}` } 
+    this.http.post<any>(`${baseUrl}/api/deploy/generate`, {}, {
+      headers: { Authorization: `Bearer ${this.token}` }
     }).subscribe({
       next: (res) => {
         this.currentDeploymentToken.set(res.token);
@@ -365,10 +369,11 @@ export class SettingsComponent implements OnInit {
     });
   }
 
-  getDownloadLink() {
+  getDownloadLink(type: 'exe' | 'msi' = 'exe') {
     const baseUrl = this.configService.getApiBaseUrl();
-    return `${baseUrl}/api/deploy/download/${this.currentDeploymentToken()}`;
+    return `${baseUrl}/api/deploy/download/${this.currentDeploymentToken()}?type=${type}`;
   }
+
 
   getSafeHost() {
     return window.location.hostname.replace(/\./g, '-');

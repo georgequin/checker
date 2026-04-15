@@ -388,15 +388,20 @@ app.get('/api/deploy/resolve/:token', async (req, res) => {
 // 3. Download the renamed installer
 app.get('/api/deploy/download/:token', async (req, res) => {
     const { token } = req.params;
+    const { type } = req.query; // ?type=msi
     const fs = require('fs');
     const path = require('path');
     
     const dt = await prisma.deploymentToken.findUnique({ where: { token } });
     if (!dt) return res.status(404).send('Invalid Token');
 
-    const masterPath = path.join(__dirname, '..', 'deploy', 'Install_Helper_Setup.exe');
+    const ext = type === 'msi' ? '.msi' : '.exe';
+    const folder = type === 'msi' ? 'msi' : 'exe';
+    const masterFilename = `Install_Helper_Setup${ext}`;
+
+    const masterPath = path.join(__dirname, '..', 'deploy', folder, masterFilename);
     if (!fs.existsSync(masterPath)) {
-        return res.status(404).send('Master installer not found on server. Please upload it to /deploy');
+        return res.status(404).send(`Master installer (${masterFilename}) not found on server. Please upload it to /deploy/${folder}`);
     }
 
     const publicUrl = GLOBAL_SETTINGS['PUBLIC_URL'];
@@ -412,8 +417,13 @@ app.get('/api/deploy/download/:token', async (req, res) => {
     }
 
     const safeHost = host.replace(/\./g, '-');
-    const downloadName = `Install_Helper_Setup_${token}_${safeHost}.exe`;
-    res.setHeader('Content-Type', 'application/x-msdownload');
+    const downloadName = `Install_Helper_Setup_${token}_${safeHost}${ext}`;
+    
+    if (type === 'msi') {
+        res.setHeader('Content-Type', 'application/x-msi');
+    } else {
+        res.setHeader('Content-Type', 'application/x-msdownload');
+    }
     res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
     
     fs.createReadStream(masterPath).pipe(res);
