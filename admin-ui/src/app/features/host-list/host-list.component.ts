@@ -252,6 +252,15 @@ import { ConfigService } from '../../core/services/config.service';
                       </div>
 
                       <div class="mt-4">
+                         <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Select Monitor</div>
+                         <div class="flex rounded overflow-hidden border border-gray-700 bg-black/20">
+                            <button (click)="selectMonitor(0)" [ngClass]="{'bg-blue-600 font-bold text-white': activeMonitor() === 0, 'text-gray-400': activeMonitor() !== 0}" class="flex-1 py-1.5 text-xs hover:bg-gray-700 transition-colors border-r border-gray-700">All Monitors</button>
+                            <button (click)="selectMonitor(1)" [ngClass]="{'bg-blue-600 font-bold text-white': activeMonitor() === 1, 'text-gray-400': activeMonitor() !== 1}" class="flex-1 py-1.5 text-xs hover:bg-gray-700 transition-colors border-r border-gray-700">Display 1</button>
+                            <button (click)="selectMonitor(2)" [ngClass]="{'bg-blue-600 font-bold text-white': activeMonitor() === 2, 'text-gray-400': activeMonitor() !== 2}" class="flex-1 py-1.5 text-xs hover:bg-gray-700 transition-colors">Display 2</button>
+                         </div>
+                      </div>
+
+                      <div class="mt-4">
                          <div class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest mb-2">Select Logon Session</div>
                          <div class="flex rounded overflow-hidden border border-gray-700 bg-black/20">
                             <button (click)="switchSessionMode('terminal')" [ngClass]="{'bg-blue-600 font-bold text-white': sessionType() === 'terminal', 'text-gray-400': sessionType() !== 'terminal'}" class="flex-1 py-2 text-xs hover:bg-gray-700 transition-colors border-r border-gray-700">[Backstage]</button>
@@ -418,6 +427,7 @@ export class HostListComponent implements OnInit {
   vncQuality = signal<number>(2); // 0=Low, 2=Med, 9=High
   clipboardSync = signal<boolean>(true);
   isRecording = signal<boolean>(false);
+  activeMonitor = signal<number>(0);
   
   // File Explorer State
   currentDirPath = signal<string>('');
@@ -855,6 +865,40 @@ export class HostListComponent implements OnInit {
         this.showToast('Quality Changed', `VNC Quality set to ${quality === 0 ? 'Low' : quality === 9 ? 'High' : 'Medium'}`, 'info');
     }
     this.closeToolbarMenu();
+  }
+
+  selectMonitor(monitorId: number) {
+     this.activeMonitor.set(monitorId);
+     this.closeToolbarMenu();
+     
+     if (this.rfbInstance) {
+         if (monitorId === 0) {
+             this.showToast('Display Changed', 'Now viewing All Monitors natively over VNC.', 'info');
+             // Native Full Desktop mapping reset
+             this.sessionContainer.nativeElement.style.overflow = 'auto';
+             const canvas = this.sessionContainer.nativeElement.querySelector('canvas');
+             if (canvas) {
+                 canvas.style.transform = 'none';
+                 canvas.style.transformOrigin = 'center center';
+             }
+         } else {
+             this.showToast('Display Focused', `Isolating viewport stream for Display ${monitorId}.`, 'info');
+             // UltraVNC combines multi-monitors into a single massive canvas width (e.g. 3840x1080).
+             // By forcing CSS translation on the underlying canvas within our container, we can instantly
+             // "switch monitors" client-side without having to send proprietary renegotiation packets to the engine.
+             const canvas = this.sessionContainer.nativeElement.querySelector('canvas');
+             if (canvas) { 
+                 const shift = monitorId === 1 ? '0%' : '-50%';
+                 canvas.style.transformOrigin = 'top left';
+                 canvas.style.transform = `scale(2) translateX(${shift})`; 
+                 this.sessionContainer.nativeElement.style.overflow = 'hidden';
+                 
+                 // Note: scale(2) and translateX offset assumes two equal-size monitors. The ideal implementation
+                 // involves adding Socket events to grab WMI monitor sizing structs, but this effectively 
+                 // stubs the behavior for wide-stream UltraVNC setups bridging the ScreenConnect layout requirement.
+             }
+         }
+     }
   }
 
   switchSessionMode(mode: 'vnc' | 'terminal') {
