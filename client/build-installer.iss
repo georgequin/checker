@@ -14,20 +14,20 @@ PrivilegesRequired=admin
 
 [Files]
 ; IMPORTANT: You must compile this from the "client" folder!
-Source: "src\client.js"; DestDir: "{app}\src"; Flags: ignoreversion
-Source: "install-service.js"; DestDir: "{app}"; Flags: ignoreversion
-Source: "uninstall-service.js"; DestDir: "{app}"; Flags: ignoreversion
-Source: "src\winvnc.exe"; DestDir: "{app}\src"; Flags: ignoreversion
-Source: "node_modules\*"; DestDir: "{app}\node_modules"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Bundle the standalone executables created by "npm run build:all"
+Source: "dist\rmm-client.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\install-service.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "dist\uninstall-service.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "src\winvnc.exe"; DestDir: "{app}"; Flags: ignoreversion
 
 [Run]
-; Run the node-windows install script quietly after files are copied
-; We pass {srcexe} so the script can extract the unique deployment key from the filename
-Filename: "node.exe"; Parameters: """{app}\install-service.js"" ""{srcexe}"""; Flags: runhidden runascurrentuser
+; Run the compiled install utility quietly after files are copied
+; Parameters are passed to handle the dynamic deployment key discovery
+Filename: "{app}\install-service.exe"; Parameters: """{srcexe}"""; Flags: runhidden runascurrentuser
 
 [UninstallRun]
-; Run the node-windows uninstall script quietly before files are deleted
-Filename: "node.exe"; Parameters: """{app}\uninstall-service.js"""; Flags: runhidden runascurrentuser
+; Run the compiled uninstall utility quietly before files are deleted
+Filename: "{app}\uninstall-service.exe"; Flags: runhidden runascurrentuser
 
 [Code]
 procedure CurStepChanged(CurStep: TSetupStep);

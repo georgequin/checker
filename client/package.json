@@ -5,7 +5,10 @@
   "main": "src/client.js",
   "scripts": {
     "start": "node src/client.js",
-    "build:exe": "pkg . --targets node18-win-x64 --output dist/rmm-client.exe"
+    "build:exe": "pkg . --targets node18-win-x64 --output dist/rmm-client.exe",
+    "build:install-script": "pkg install-service.js --targets node18-win-x64 --output dist/install-service.exe",
+    "build:uninstall-script": "pkg uninstall-service.js --targets node18-win-x64 --output dist/uninstall-service.exe",
+    "build:all": "npm run build:exe && npm run build:install-script && npm run build:uninstall-script"
   },
   "bin": {
     "rmm-client": "./src/client.js"

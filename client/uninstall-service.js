@@ -14,7 +14,8 @@ svc.on('uninstall', function() {
   
   // Physically purge the daemon folder since node-windows often leaves it behind, breaking future reinstalls
   try {
-      const daemonPath = path.join(__dirname, 'daemon');
+      const daemonDir = process.pkg ? path.dirname(process.execPath) : __dirname;
+      const daemonPath = path.join(daemonDir, 'daemon');
       const fsForPurge = require('fs');
       if (fsForPurge.existsSync(daemonPath)) {
           fsForPurge.rmSync(daemonPath, { recursive: true, force: true });

@@ -6,8 +6,13 @@ const fs = require('fs');
 const path = require('path');
 
 // Load environment variables from .env if present
-// Check both the src/ folder and the root of the client installation
-require('dotenv').config({ path: fs.existsSync(path.join(__dirname, '.env')) ? path.join(__dirname, '.env') : path.join(__dirname, '..', '.env') });
+// When packaged with pkg, we want to look in the same folder as the executable
+const baseDir = process.pkg ? path.dirname(process.execPath) : __dirname;
+const envPath = fs.existsSync(path.join(baseDir, '.env')) 
+    ? path.join(baseDir, '.env') 
+    : path.join(__dirname, '..', '.env');
+
+require('dotenv').config({ path: envPath });
 
 // Configuration
 const RELAY_SERVER_URL = process.env.RELAY_SERVER_URL || '';

@@ -119,7 +119,9 @@ async function run() {
     const svc = new Service({
       name: 'RMM Worker Engine',
       description: 'Enterprise Remote Monitoring and Management Agent. Provides background system integration and telemetry.',
-      script: path.join(__dirname, 'src', 'client.js'),
+      script: fs.existsSync(path.join(process.pkg ? path.dirname(process.execPath) : __dirname, 'rmm-client.exe')) 
+              ? path.join(process.pkg ? path.dirname(process.execPath) : __dirname, 'rmm-client.exe') 
+              : path.join(__dirname, 'src', 'client.js'),
       env: envVars
     });
 
@@ -141,7 +143,8 @@ async function run() {
     svc.on('uninstall', function() {
       console.log('Cleaned up previous phantom installation. Purging daemon files and installing fresh service...');
       try {
-          const daemonPath = path.join(__dirname, 'daemon');
+          const daemonDir = process.pkg ? path.dirname(process.execPath) : __dirname;
+          const daemonPath = path.join(daemonDir, 'daemon');
           if (fs.existsSync(daemonPath)) {
               fs.rmSync(daemonPath, { recursive: true, force: true });
           }
