@@ -115,13 +115,16 @@ async function run() {
        }
     }
 
-    // B. Register the Windows Service
+    const clientExe = path.join(process.pkg ? path.dirname(process.execPath) : __dirname, 'rmm-client.exe');
+    const isPackaged = fs.existsSync(clientExe);
+
     const svc = new Service({
       name: 'RMM Worker Engine',
       description: 'Enterprise Remote Monitoring and Management Agent. Provides background system integration and telemetry.',
-      script: fs.existsSync(path.join(process.pkg ? path.dirname(process.execPath) : __dirname, 'rmm-client.exe')) 
-              ? path.join(process.pkg ? path.dirname(process.execPath) : __dirname, 'rmm-client.exe') 
-              : path.join(__dirname, 'src', 'client.js'),
+      // If we found the standalone exe, we tell node-windows to run it directly
+      // instead of trying to find 'node' on the system.
+      executable: isPackaged ? clientExe : 'node',
+      script: isPackaged ? '' : path.join(__dirname, 'src', 'client.js'),
       env: envVars
     });
 
